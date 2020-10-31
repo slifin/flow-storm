@@ -10,21 +10,26 @@ Tested on jvm, browser, nodejs, react-native.
 
 Big thanks to the [Cider](https://github.com/clojure-emacs/cider-nrepl) team for `cider.nrepl.middleware.util.instrument` since this code started as a fork of it.
 
-## Before starting your day
+## Step 1 (Running the debugger)
 
 In a terminal run a [flow-storm-debugger](https://github.com/jpmonettas/flow-storm-debugger) instance.
 
 ```bash
-clj -Sdeps '{:deps {jpmonettas/flow-storm-debugger {:mvn/version "0.2.6"}}}' -m flow-storm-debugger.server
+clj -Sdeps '{:deps {jpmonettas/flow-storm-debugger {:mvn/version "0.3.1"}}}' -m flow-storm-debugger.server
 ```
-And point your browser to http://localhost:7722
+
+This will run the debugger. For instructions on using the debugger see [flow-storm-debugger](https://github.com/jpmonettas/flow-storm-debugger).
+
+One instance of the debugger is enough for all you Clojure and ClojureScript projects.
+
+## Step 2 (Instrument your code)
 
 Now add this library to your application dependencies (deps.edn, project.clj, shadow-cljs.edn, etc).
 
 Simple repl example :
 
 ```bash
-clj -Sdeps '{:deps {jpmonettas/flow-storm {:mvn/version "0.2.6"}}}'
+clj -Sdeps '{:deps {jpmonettas/flow-storm {:mvn/version "0.3.0"}}}'
 ```
 
 ```clojure
@@ -54,7 +59,20 @@ clj -Sdeps '{:deps {jpmonettas/flow-storm {:mvn/version "0.2.6"}}}'
 (bar)
 ```
 
-Everytime a traced "flow** executes, it will trace the execution in the debugger.
+Everytime a traced **flow** executes, it will trace the execution in the debugger.
+
+You can use **#ztrace** instead of **#trace** to make the flow-id always be 0. This is useful
+for incrementaly trying things at the repl, and stopping the debugger from creating a different flow tab each time
+you run the expression.
+
+## Connecting to a debugger remotely 
+
+If you need to connect to a debugger instance not running in the same device as your debugged procees you can optionally provide
+`flow-storm.api/connect` the following options:
+
+- protocol Can be `:http` or `:https` (defaults to :http)
+- host (defaults to "localhost")
+- port (defaults to 7722)
 
 ## Notes
 

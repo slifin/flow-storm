@@ -22,25 +22,26 @@
 
 (defn init-trace
   "Instrumentation function. Sends the `:flow-storm/init-trace` trace"
-  [{:keys [form-id form-flow-id args-vec fn-name]} form]
+  [{:keys [form-id form-flow-id flow-id args-vec fn-name]} form]
   (let [trace-data (cond-> {:flow-id *flow-id*
                             :form-id form-id
                             :form-flow-id form-flow-id
                             :form (pr-str form)}
                      args-vec (assoc :args-vec (binding [*print-length* (or *print-length* 50)]
                                                  (pr-str args-vec)))
-                     fn-name  (assoc :fn-name fn-name))]
+                     fn-name  (assoc :fn-name fn-name)
+                     flow-id  (assoc :fixed-flow-id-starter? true))]
     (ws-send [:flow-storm/init-trace trace-data])))
 
 (defn trace-and-return
   "Instrumentation function. Sends the `:flow-storm/add-trace` trace and returns the result."
-  [result {:keys [coor outer-form? form-id form-flow-id]} orig-form]
+  [result err {:keys [coor outer-form? form-id form-flow-id]} orig-form]
   (let [trace-data (cond-> {:flow-id *flow-id*
                             :form-id form-id
                             :form-flow-id form-flow-id
-                            :coor coor
-                            :result (binding [*print-length* (or *print-length* 50)]
-                                      (pr-str result))}
+                            :coor coor}
+                     (not err)   (assoc :result (binding [*print-length* (or *print-length* 50)] (pr-str result)))
+                     err         (assoc :err {:error/message (:message err)})
                      outer-form? (assoc :outer-form? true))]
 
     (ws-send [:flow-storm/add-trace trace-data])
@@ -63,10 +64,13 @@
   "Connects to the flow-storm debugger.
   When connection is ready, replies any events hold in `pre-conn-events-holder`"
   ([] (connect nil))
-  ([{:keys [host port]}]
-   (let [{:keys [chsk ch-recv send-fn state]} (sente/make-channel-socket-client! "/chsk"  nil {:type :ws
-                                                                                               :host (or host "localhost")
-                                                                                               :port (or port 7722)})]
+  ([{:keys [host port protocol]}]
+   (let [{:keys [chsk ch-recv send-fn state]} (sente/make-channel-socket-client! "/chsk"
+                                                                                 "dummy-csrf-token" ;; to avoid warning
+                                                                                 {:type :ws
+                                                                                  :protocol (or protocol :http)
+                                                                                  :host (or host "localhost")
+                                                                                  :port (or port 7722)})]
 
      ;; take one event from ch-recv, since we just connected it should be :chsk/state for open
      ;; TODO: improve this. It should be a go-loop handling all events from ch-recv.
